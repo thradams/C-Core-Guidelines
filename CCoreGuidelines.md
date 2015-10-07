@@ -61,6 +61,18 @@ void X_Delete(X* px)
 }
 ```
 
+Reset, destroi o objeto e volta para o estado correspondente ao init.
+
+Implementação típica
+```
+void X_Reset(X* px)
+{
+     X_Destroy(px);
+     X_Init(px);
+}
+```
+
+
 
 Parâmetros de funções.
 
@@ -137,9 +149,19 @@ Ponteiros que escapam do escopo.
 ```
 Result X_Clone(X **ppx)
 {
-   
+   *ppx = pnew; //out
 }
 ````
+
+Em poucos casos.
+```
+X* X_Create()
+{
+   return pnew; //out
+}
+````
+
+
 
 
 
