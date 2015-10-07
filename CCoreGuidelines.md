@@ -62,6 +62,76 @@ void X_Delete(X* px)
 ```
 
 
+Parâmetros de funções.
+
+Todo parâmetro do tipo ponteiro é por padrão não-nulo e input.
+
+Exemplo:
+
+```
+void F(X* px)
+{
+  //Nada declarado então px é IN não nulo.
+}
+```
+
+Parâmetros do tipo ponteiro out deve ser comentados no momento da atribuição. 
+Por padrão ele é considerado não nulo.
+```
+void Get(int *p)
+{
+   *p = 1; //out
+}
+```
+
+Parâmetros IN opcionais devem ser comentados no momento do if.
+
+```
+void F(X* px)
+{
+  if (px != NULL) //optional
+  {
+    ... usar px
+  }
+}
+```
+
+Todos os parâmetros ponteiros são considerados não donos do conteúdo a não ser que informe o contrário.
+Caso a função receba um ponteiro da qual é dona ela deve informar no momento da destruição ou no momento da trasferência de ownership.
+
+
+
+```
+void F(X** ppx)
+{
+  X* px = *ppx;
+  *ppx = NULL;//moved
+
+  X_Delete(px); //owner
+}
+```
+
+
+Para casos exceptionais de performance pode-se ignorar a atruibição para nulo.
+
+```
+void F(X* px)
+{
+
+  X_Delete(px); //owner e chamador deve ignorar px após a chamada desta função.
+}
+```
+
+Qualquer mudança de ownership deve ser comentada. A não existencia de comentários indica que é apenas uma referência fraca.
+
+```
+void F(X** ppx)
+{
+  X* px = *ppx;
+}
+```
+
+
 
 
 
