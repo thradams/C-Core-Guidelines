@@ -45,7 +45,7 @@ Se px for nulo a função não tem efeito.
 
 Implementação típica
 
-
+```
 void X_Delete(X* px)
 {
    if (px != NULL)
@@ -54,6 +54,7 @@ void X_Delete(X* px)
      free(px);
    }
 }
+```
 
 
 
