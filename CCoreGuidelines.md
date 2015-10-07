@@ -205,6 +205,17 @@ void X_SetNameMove(X* px, StringC* s)
 }
 ```
 
+Por padrão, const char* significa não dono, e o tempo de vida deve ser garantido por fora.
+Ou seja, o escopo de vida de Info deve ser menos que name.
+```
+struct Info
+{
+  const char* name;
+};
+```
+
+
+
 
 
 
