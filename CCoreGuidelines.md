@@ -115,9 +115,10 @@ void F(X** ppx)
 Para casos exceptionais de performance pode-se ignorar a atruibição para nulo.
 
 ```
-void F(X* px)
+//Atenção: Chamador deve ignorar px após chamada desta função
+//Com sucesso ou falha ela ficou responsável por px.
+Result F(X* px)
 {
-
   X_Delete(px); //owner e chamador deve ignorar px após a chamada desta função.
 }
 ```
@@ -130,6 +131,16 @@ void F(X** ppx)
   X* px = *ppx;
 }
 ```
+
+Ponteiros que escapam do escopo.
+
+```
+Result X_Clone(X **ppx)
+{
+   
+}
+````
+
 
 
 
