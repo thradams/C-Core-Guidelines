@@ -196,6 +196,16 @@ Result X_SetName(X* px, const char * name)
 
 
 
+Só se usa StringC em parâmetros de funções caso se deseje repassar onership.
+
+```
+void X_SetNameMove(X* px, StringC* s)
+{
+    StringC_MoveFromTo(s, &px->name);
+}
+```
+
+
 
 
 
