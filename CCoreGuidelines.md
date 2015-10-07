@@ -164,6 +164,37 @@ X* X_Create()
 
 
 
+Strings
+
+typedef char* StringC;
+
+O tipo StringC significa que é um dono de um char*.
+Para strings não donas, usar const char*.
+
+```
+struct X
+{
+  StringC name;
+};
+
+Result X_Init(X * px)
+{
+   Result result = StringC_Init(&px->name);
+   return result;
+}
+
+X_Destroy(X* px)
+{
+  StringC_Destroy(&px->name);
+}
+
+Result X_SetName(X* px, const char * name)
+{
+  return StringC_Change(&px->name, name);
+}
+```
+
+
 
 
 
