@@ -354,6 +354,10 @@ Mantenha no header apenas as funções usadas por outros arquivos. Funções que
 ##Encapsulamento de objetos criados no heap
 Para objetos criados sempre no heap, esconda a função Init e use ponteiro opacos para esconder os detalhes de implementação.
 
+##Encapsulamento de objetos criados na pilha
+Utilize "Getters" e "Setters" para qualquer operação feita no objeto. Você pode definir uma macro para a inicialização estática.
+
+
 ##Nomes de funções de classe
 Use o nome da classe T_ seguido do nome da função. Para funções estáticas declaradas no .c, não é preciso seguir esta padronização.
 
@@ -375,6 +379,10 @@ Este este arquivo para preparar o ambiente de compilação de acordo com a plata
 inline no C
 
 
+#Closures em C
+
+
+#Custódia em calbacks e void*
 
 
 
