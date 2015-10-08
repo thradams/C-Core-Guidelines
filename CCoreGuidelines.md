@@ -9,6 +9,7 @@ typedef enum
 {
   RESULT_OK,
   RESULT_FAIL,
+  RESULT_OUT_OF_MEM,
 }Result;
 ```
 Adicione apenas os erros que você está usando. 
@@ -42,7 +43,7 @@ px nunca é nulo garantido pelo chamador.
 
 ##T_Destroy
 ```
-void T_Destroy(X* px);
+void T_Destroy(T* p);
 ````
 
 Destroi o objeto px. Se px for nulo não faz nada.
@@ -98,86 +99,64 @@ Utilize um alocador próprio (Malloc/Free), desta forma você pode verificar lea
 
 ##T_Delete
 
-```
-void T_Delete(X* px)
-```
-
-Destrói o objeto px e devolve a memória para o alocador.
-Obrigatoriamente, se px for nulo a função não tem efeito.
-
-Implementação típica
-
-```
-void X_Delete(X* px)
+void T_Delete(T* p)
 {
-   if (px != NULL)
+   if (p != NULL)
    {
-     X_Destroy(px);
-     free(px);
+     T_Destroy(p);
+     Free(p);
    }
 }
-```
+
+Destroi o objeto p e devolve a memória para o alocador.
+Obrigatoriamente, se p for nulo a função não tem efeito.
+
+
 ##T_Reset
+
+```
+void T_Reset(T* p)
+{
+     T_Destroy(p);
+     T_Init(p);
+}
+```
 
 Reset, destroi o objeto e volta para o estado correspondente ao init.
 
-Implementação típica
-```
-void X_Reset(X* px)
-{
-     X_Destroy(px);
-     X_Init(px);
-}
-```
 
 ##Funções
 
-
 Todo parâmetro do tipo ponteiro é por padrão não-nulo e input.
 
-Exemplo:
-
 ```
-void F(X* px)
+void F(T* p)
 {
-  //Nada declarado então px é IN não nulo.
+  printf("%d", p->i);
 }
 ```
 
-Parâmetros do tipo ponteiro out deve ser comentados no momento da atribuição. 
-Por padrão, ele é considerado não nulo.
+Ponteiros out devem ser comentados na atribuição.
+
 ```
 void Get(int *p)
 {
    *p = 1; //out
 }
 ```
-Caso o parâmetro out seja opcional, comentar no if.
+
+Parâmetros In ou Out opcionais tem sufixo Opt. 
 ```
 void Get(int *pOpt)
 {
-    if (pOpt != NULL) //optional
+    if (pOpt != NULL)
     {
        *pOup = 1; //out
     }
 }
 ```
 
-Parâmetros IN opcionais devem ser comentados ou ter sufixo Opt.
-
-```
-void F(X* pxOpt)
-{
-  if (pxOpt != NULL)
-  {
-    ... usar pxOpt
-  }
-}
-```
-
-Todos os parâmetros ponteiros são considerados não donos do conteúdo a não ser que informe o contrário.
-
-Caso a função receba um ponteiro da qual é dona ela deve informar no momento da destruição ou no momento da trasferência de ownership.
+Todos os parâmetros ponteiros são considerados não donos por padrão.
 
 ##Custódia transferida de fora para dentro de uma função.
 
