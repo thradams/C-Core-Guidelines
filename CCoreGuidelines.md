@@ -156,6 +156,8 @@ Todos os parâmetros ponteiros são considerados não donos do conteúdo a não 
 
 Caso a função receba um ponteiro da qual é dona ela deve informar no momento da destruição ou no momento da trasferência de ownership.
 
+##Custódia transferida de fora para dentro de uma função.
+
 A transferência de custódia de um objeto para o parâmetro de uma função pode ser de duas formas.
 Incondicional, aonde a custódia é transferida independente do sucesso da função. Ou condicionado ao sucesso.
 Esta informação deve ser obrigatoriamente informada na função e comentada no chamador.
@@ -174,6 +176,10 @@ Result Array_Add(List* pArray, T * pItem)
 
 
 Para casos exceptionais de performance pode-se ignorar a atruibição para nulo.
+
+##Custódia transferida de dentro para fora da função.
+Neste caso a custódia é sempre condicionada ao sucesso da função e nunca é parcial.
+
 
 ```
 //Atenção: Chamador deve ignorar px após chamada desta função
