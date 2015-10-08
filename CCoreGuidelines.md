@@ -1,11 +1,34 @@
 
 
-#Error propagation
+#Propagação de erros
 
-Result
-Código de erros do aplicativo.
+Defina um tipo erro para fazer a propagação do erro através do resultado da função.
 
-Semântica de Objetos
+```
+typedef enum 
+{
+  RESULT_OK,
+  RESULT_FAIL,
+}Result;
+```
+Adicione apenas os erros que você está usando. 
+Não crie erros para o futuro e remova erros não usados.
+Logo que precisar, crie uma função para converter código de erro em texto.
+
+
+
+#Objetos em C
+
+Use uma semântica consistente.
+
+T_Init
+T_Destroy
+T_Delete
+T_Create
+T_Copy
+T_Swap
+
+###T_Init
 
 ```
 Result X_Init(X* px);
@@ -21,6 +44,8 @@ void X_Destroy(X* px);
 
 Destroi o objeto px. Se px for nulo não faz nada.
 Depois da chamada desta função px não pode mais ser usado com exceção da função X_Init.
+
+###T_Create
 ```
 X*  X_Create();
 ```
