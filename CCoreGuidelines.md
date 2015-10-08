@@ -56,9 +56,9 @@ Utiliza um alocador para criar o objeto T no heap e depois inicializa o objeto. 
 
 Implementação típica.
 ```
-X* X_Create()
+T* T_Create()
 {
-  X* px = (X*) Malloc(sizeof(X) * 1);
+  T* px = (T*) Malloc(sizeof(X) * 1);
   if (px != NULL)
   {
      Result result = X_Init(px);
@@ -76,7 +76,7 @@ Utilize um alocador próprio (Malloc/Free), desta forma você pode verificar lea
 ##T_Delete
 
 ```
-void X_Delete(X* px)
+void T_Delete(X* px)
 ```
 
 Destrói o objeto px e devolve a memória para o alocador.
@@ -156,10 +156,18 @@ Todos os parâmetros ponteiros são considerados não donos do conteúdo a não 
 
 Caso a função receba um ponteiro da qual é dona ela deve informar no momento da destruição ou no momento da trasferência de ownership.
 
+A transferência de custódia de um objeto para o parâmetro de uma função pode ser de duas formas.
+Incondicional, aonde a custódia é transferida independente do sucesso da função. Ou condicionado ao sucesso.
+Esta informação deve ser obrigatoriamente informada na função e comentada no chamador.
 
 ```
-void Add(T * pTOwner)
+Result Array_Add(List* pArray, T * pItem)
 {
+  Result result = Array_Reserve(pArray, pArray->size + 1);
+  if (result == RESULT_OK)
+  {
+  
+  }
   T_Delete(pTOwner);
 }
 ```
@@ -298,6 +306,29 @@ void F(Info *p)
 
 
 ```
+##Arquivos
+Utilize um arquico .h e outro .c para declarar e implementar uma classe.
+
+##Alteração do estado de uma classe.
+
+Toda alteração de estado de uma classe ,por padrão, é feita por funções declaradas no .h ou .c da classe.
+Não seguir esta regra é extremamente perigoso já que o C não possui encapsulamento.
+
+##Visualização do estado de uma classe
+Acesse diretamente os dados de uma classe apenas para leitura e apenas dos membros da classe que você considera oficialmente parte da interface.
+Para todos os outros user "Getters"
+
+##Encapsulamento
+
+Mantenha no header apenas as funções usadas por outros arquivos. Funções que são detalhes de implementação mantenha como static no arquivo c.
+
+##Encapsulamento de objetos criados no heap
+Para objetos criados sempre no heap, esconda a função Init e use ponteiro opacos para esconder os detalhes de implementação.
+
+##Nomes de funções de classe
+Use o nome da classe T_ seguido do nome da função. Para funções estáticas declaradas no .c, não é preciso seguir esta padronização.
+
+#Polimorfismo no C
 
 
 
