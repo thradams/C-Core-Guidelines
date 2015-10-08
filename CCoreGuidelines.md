@@ -42,7 +42,7 @@ px nunca é nulo garantido pelo chamador.
 
 ##T_Destroy
 ```
-void X_Destroy(X* px);
+void T_Destroy(X* px);
 ````
 
 Destroi o objeto px. Se px for nulo não faz nada.
@@ -50,7 +50,8 @@ Depois da chamada desta função px não pode mais ser usado com exceção da fu
 
 ###T_Create
 ```
-X*  X_Create();
+T*  T_Create();
+Result T_CreateEx(T**pp);
 ```
 Utiliza um alocador para criar o objeto T no heap e depois inicializa o objeto. Caso a função falhe nenhum leak é criado.
 
@@ -58,17 +59,39 @@ Implementação típica.
 ```
 T* T_Create()
 {
-  T* px = (T*) Malloc(sizeof(X) * 1);
-  if (px != NULL)
+  T* p = (T*) Malloc(sizeof(T) * 1);
+  if (p != NULL)
   {
-     Result result = X_Init(px);
+     Result result = T_Init(p);
      if (result != RESULT_OK)
      {
-       Free(px);
-       px = NULL;
+       Free(p);
+       p = NULL;
      }
   }
-  return px;
+  return p;
+}
+
+Result T_CreateEx(T**pp)
+{
+  T* p = (T*) Malloc(sizeof(T) * 1);
+  if (p != NULL)
+  {
+     Result result = T_Init(p);
+     if (result == RESULT_OK)
+     {
+        *pp = p;
+     }
+     else
+     {
+       Free(p);
+     }
+  }
+  else
+  {
+     result = RESULT_OUT_OF_MEM;
+  }
+  return result;
 }
 ```
 Utilize um alocador próprio (Malloc/Free), desta forma você pode verificar leaks e testar a quantidade de memória necessária para seu programa.
@@ -338,7 +361,18 @@ Use o nome da classe T_ seguido do nome da função. Para funções estáticas d
 
 
 
+#Asserts
 
+Não utilize assert.h diretamente.
+Use ASSERT para permitir outras configurações.
+
+
+#Config.h
+Include primeiramente o arquivo Config.h.
+Este este arquivo para preparar o ambiente de compilação de acordo com a plataforma.
+
+#Visual C++
+inline no C
 
 
 
