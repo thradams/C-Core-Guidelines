@@ -20,26 +20,27 @@ Logo que precisar, crie uma função para converter código de erro em texto.
 
 #Objetos em C
 
-Use uma semântica consistente.
 
-T_Init
-T_Destroy
-T_Delete
-T_Create
-T_Copy
-T_Swap
+###Declaração
+
+```
+typedef struct 
+{
+  ...
+} T;
+```
 
 ###T_Init
 
 ```
-Result X_Init(X* px);
+Result T_Init(T* p);
 ```
 
-Inicializa o objeto X.  
-Caso tenha sucesso na inicialização a finalização (X_Destroy) deve ser chamada. 
+Inicializa o objeto p.  
+Caso tenha sucesso na inicialização a finalização (T_Destroy) deve ser chamada. 
 Em caso de erro, a instância não pode ser usada e nem destruída. 
 Em caso de erro nenhum leak ou efeito colateral vai ser criado.
-px nunca é nulo garantido pelo chamador.
+p nunca é NULO garantido pelo chamador.
 
 ##T_Destroy
 ```
