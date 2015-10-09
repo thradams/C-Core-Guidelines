@@ -14,6 +14,7 @@ typedef enum
 ```
 Adicione apenas os erros que você está usando. 
 Não crie erros para o futuro e remova erros não usados.
+
 Logo que precisar, crie uma função para converter código de erro em texto.
 
 
@@ -21,7 +22,7 @@ Logo que precisar, crie uma função para converter código de erro em texto.
 #Objetos em C
 
 
-###Declaração
+##Declaração
 
 ```
 typedef struct 
@@ -29,6 +30,7 @@ typedef struct
   ...
 } T;
 ```
+##Funções comuns
 
 ###T_Init
 
@@ -36,50 +38,48 @@ typedef struct
 Result T_Init(T* p);
 ```
 
-Inicializa o objeto p.  
-Caso tenha sucesso na inicialização a finalização (T_Destroy) deve ser chamada. 
-Em caso de erro, a instância não pode ser usada e nem destruída. 
-Em caso de erro nenhum leak ou efeito colateral vai ser criado.
-p nunca é NULO garantido pelo chamador.
+Inicializa o objeto p.
+O chamador deve garantir que p não é nulo. A implementação deve garantir que nenhum leak ocorre em caso de falha.
+Caso a Init não tenha sucesso, nenhuma outra função que use T pode ser usada, incluindo a T_Destroy.
+Se Init teve sucesso  o _Destroy deve ser sempre chamado.
+```
+int main()
+{
+   T t;
+   Result result = T_Init(&t);
+   if (result == RESULT_OK)
+   {
+     T_Destroy(&t);
+   }
+}
+```
 
 ##T_Destroy
 ```
 void T_Destroy(T* p);
 ````
+O destroy é usado pelo chamador para indicar o término do uso do objeto p. 
 
-Destroi o objeto px. Se px for nulo não faz nada.
-Depois da chamada desta função px não pode mais ser usado com exceção da função X_Init.
+O chamador deve garantir que p não é nulo.
+Depois do destroy p não pode mais ser usado.
+O implementador usa o destroy para liberar qualquer recurso e destruir os objetos filhos.
+
 
 ###T_Create
 ```
-T*  T_Create();
-Result T_CreateEx(T**pp);
+Result T_Create(T**pp);
 ```
-Utiliza um alocador para criar o objeto T no heap e depois inicializa o objeto. Caso a função falhe nenhum leak é criado.
-
-Implementação típica.
+Utiliza um alocador para criar o objeto T no heap e depois inicializa o objeto.
+Caso a função falhe nenhum leak é criado.
 ```
-T* T_Create()
+Result T_Create(T**pp)
 {
+ Result result = RESULT_OUT_OF_MEM;
+ 
   T* p = (T*) Malloc(sizeof(T) * 1);
   if (p != NULL)
   {
-     Result result = T_Init(p);
-     if (result != RESULT_OK)
-     {
-       Free(p);
-       p = NULL;
-     }
-  }
-  return p;
-}
-
-Result T_CreateEx(T**pp)
-{
-  T* p = (T*) Malloc(sizeof(T) * 1);
-  if (p != NULL)
-  {
-     Result result = T_Init(p);
+     result = T_Init(p);
      if (result == RESULT_OK)
      {
         *pp = p;
@@ -89,16 +89,12 @@ Result T_CreateEx(T**pp)
        Free(p);
      }
   }
-  else
-  {
-     result = RESULT_OUT_OF_MEM;
-  }
   return result;
 }
 ```
 Utilize um alocador próprio (Malloc/Free), desta forma você pode verificar leaks e testar a quantidade de memória necessária para seu programa.
 
-##T_Delete
+###T_Delete
 
 void T_Delete(T* p)
 {
@@ -113,7 +109,7 @@ Destroi o objeto p e devolve a memória para o alocador.
 Obrigatoriamente, se p for nulo a função não tem efeito.
 
 
-##T_Reset
+###T_Reset
 
 ```
 void T_Reset(T* p)
