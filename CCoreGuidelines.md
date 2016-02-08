@@ -5,15 +5,21 @@
 Defina um tipo erro para fazer a propagação do erro através do resultado da função.
 
 ```
+//Result.h
+
 typedef enum 
 {
   RESULT_OK,
   RESULT_FAIL,
   RESULT_OUT_OF_MEM,
-}Result;
+} Result;
 ```
 Adicione apenas os erros que você está usando. 
-Não crie erros para o futuro e remova erros não usados.
+Não crie erros para o futuro e remova erros não usados. 
+
+
+(Uma ferramenta de análise estática deveria procurar por todas as comparações (if/switches) de variáveis do tipo Result com cada tipo de erro. Se o tipo de erro não for usado deveria apresentar um warning. A ferramenta em modo "lib" deve procurar por escritas. A diferenças entre uma "lib" é que o uso de um código de erro pode ser apenas um escrita pois a leitura pode não estar visível.)
+Qualquer enum poderia usar estas regras.
 
 Logo que precisar, crie uma função para converter código de erro em texto.
 
@@ -39,9 +45,11 @@ Result T_Init(T* p);
 ```
 
 Inicializa o objeto p.
-O chamador deve garantir que p não é nulo. A implementação deve garantir que nenhum leak ocorre em caso de falha.
+O chamador deve garantir que p não é nulo. Uma característica desta função é que não interessa o estado de p. A princípio p contém lixo.
+A implementação deve garantir que nenhum leak ocorre em caso de falha.
 Caso a Init não tenha sucesso, nenhuma outra função que use T pode ser usada, incluindo a T_Destroy.
 Se Init teve sucesso  o _Destroy deve ser sempre chamado.
+Isto automaticamente cria o seguinte padrão:
 ```
 int main()
 {
@@ -71,6 +79,10 @@ Result T_Create(T**pp);
 ```
 Utiliza um alocador para criar o objeto T no heap e depois inicializa o objeto.
 Caso a função falhe nenhum leak é criado.
+Uma função Init sempre existe, mas uma create é opcional para objetos que podem ou sempre são criados no heap.
+Se o uso no código for sempre no heap mova a Init para o arquino .c.
+A create assume um alocador padrão para o objeto já que nenhum alocador é passado como parâmetro. Ou seja, o mesmo objeto não pode ser usado por diferentes regras de alocação.
+
 ```
 Result T_Create(T**pp)
 {
@@ -107,7 +119,7 @@ void T_Delete(T* p)
 
 Destroi o objeto p e devolve a memória para o alocador.
 Obrigatoriamente, se p for nulo a função não tem efeito.
-
+Caso exista uma função Create haverá uma Delete.
 
 ###T_Reset
 
@@ -119,7 +131,7 @@ void T_Reset(T* p)
 }
 ```
 
-Reset, destroi o objeto e volta para o estado correspondente ao init.
+Reset é uma utilitária, destroi o objeto e volta para o estado correspondente ao init.
 
 
 ##Funções
@@ -133,7 +145,11 @@ void F(T* p)
 }
 ```
 
-Ponteiros out devem ser comentados na atribuição.
+Qualquer comparação por nulo, torna o ponteiro opcional.
+
+
+Qualquer atribuição torna o ponteiro out. Qualquer uso antes da atribuição torna o ponteiro in-out.
+
 
 ```
 void Get(int *p)
@@ -142,26 +158,13 @@ void Get(int *p)
 }
 ```
 
-Parâmetros In ou Out opcionais tem sufixo Opt. 
-```
-void Get(int *pOpt)
-{
-    if (pOpt != NULL)
-    {
-       *pOup = 1; //out
-    }
-}
-```
-
-Todos os parâmetros ponteiros são considerados não donos por padrão.
-
 ##Custódia transferida de fora para dentro de uma função.
 
 A transferência de custódia de um objeto para o parâmetro de uma função pode ser de duas formas.
 Incondicional, aonde a custódia é transferida independente do sucesso da função. Ou condicionado ao sucesso.
-Esta informação deve ser obrigatoriamente informada na função e comentada no chamador.
 
 ```
+//Aqui a transferência é incondicional
 Result Array_Add(List* pArray, T * pItem)
 {
   Result result = Array_Reserve(pArray, pArray->size + 1);
@@ -173,30 +176,8 @@ Result Array_Add(List* pArray, T * pItem)
 }
 ```
 
-
-Para casos exceptionais de performance pode-se ignorar a atruibição para nulo.
-
 ##Custódia transferida de dentro para fora da função.
 Neste caso a custódia é sempre condicionada ao sucesso da função e nunca é parcial.
-
-
-```
-//Atenção: Chamador deve ignorar px após chamada desta função
-//Com sucesso ou falha ela ficou responsável por px.
-Result F(X* px)
-{
-  X_Delete(px); //owner e chamador deve ignorar px após a chamada desta função.
-}
-```
-
-Qualquer mudança de ownership deve ser comentada. A não existencia de comentários indica que é apenas uma referência fraca.
-
-```
-void F(X** ppx)
-{
-  X* px = *ppx;
-}
-```
 
 Todo retorno const char* de função é considerado como não passando a custódia;
 
@@ -206,37 +187,9 @@ const char* T_GetName(T *p)
    return p->name;
 }
 ```
-```
-const char* GetErrorMessage(Error e)
-{
-   switch (e)
-   {
-      case E1: return "E1";
-   }
-   return "";
-}
-```
-
-Transferencia de custódia de ponteiros que saem da função.
-A custódia só será transferida caso a função tenha sucesso.
-```
-Result T_Clone(T **ppT)
-{
-   *ppT = pnew; //out
-}
-````
-
-Em poucos casos.
-```
-X* X_Create()
-{
-   return pnew; //out
-}
-````
 
 Strings em funções são passadas como const char*.
 char* nuna deve significar número. Para isso use byte ou uint8_t.
-
 
 #Custódia de Strings
 
@@ -334,9 +287,6 @@ Para objetos criados sempre no heap, esconda a função Init e use ponteiro opac
 Utilize "Getters" e "Setters" para qualquer operação feita no objeto. Você pode definir uma macro para a inicialização estática.
 
 
-##Nomes de funções de classe
-Use o nome da classe T_ seguido do nome da função. Para funções estáticas declaradas no .c, não é preciso seguir esta padronização.
-
 #Polimorfismo no C
 
 
@@ -351,15 +301,9 @@ Use ASSERT para permitir outras configurações.
 Include primeiramente o arquivo Config.h.
 Este este arquivo para preparar o ambiente de compilação de acordo com a plataforma.
 
-#Visual C++
-inline no C
-
-
 #Closures em C
 
-
 #Custódia em calbacks e void*
-
 
 
 
