@@ -128,7 +128,7 @@ Result T_Create(T**pp)
 ```
 
 ###T_Delete
-
+```cpp
 void T_Delete(T* p)
 {
    if (p != NULL)
@@ -137,6 +137,7 @@ void T_Delete(T* p)
      Free(p);
    }
 }
+```
 
 Destroi o objeto p e devolve a memória para o alocador.
 Obrigatoriamente, se p for nulo a função não tem efeito.
