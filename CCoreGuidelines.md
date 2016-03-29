@@ -40,6 +40,12 @@ typedef struct
 
 ##Inicialização estática
 A inicialização de objetos pode ser feito em uma linha através de uma atribuição.
+T_INIT é uma macro que deve ser declarada junto do objeto.
+
+A inicialização estática também depende de um Destroy. Ver mais adiante.
+Isso porque após a inicialização estática o objeto pode sobrer transformações que fazem ele 
+adquirir recursos que deve ser liberados.
+Para uma maior simetria utilize a inicialização estática para objetos sem destroy.
 
 ```cpp
 T obj = T_INIT;
@@ -49,7 +55,7 @@ T obj = T_INIT;
 
 ###T_Init
 
-```
+```cpp
 Result T_Init(T* p);
 ```
 
@@ -77,7 +83,7 @@ int main()
 ```
 
 ##T_Destroy
-```
+```cpp
 void T_Destroy(T* p);
 ````
 O destroy é usado pelo chamador para indicar o término do uso do objeto p. 
