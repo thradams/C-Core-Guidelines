@@ -306,7 +306,11 @@ TODO
 Move o objeto de entrada para o objeto que está sendo inicializado. O objeto de entrada
 fica em um estado que pode ser destruido.
 Ele é movido condicionamente ao sucesso do init.
-
+Na verdade eh melhor usar um caso simples. aonde o move coloca o obeto no estado do init.
+A impleemntacao eh mais simles  e deveria ser o default.
+Entao um move otimizado eh que deveria ser diferenciado e so vale a pena em casos muitos especiais.
+Poderia ser chamar InitMoveDismiss
+O move cia uma situacao especial para otimizar e evitar a limpeza de algusn items.
 
 ##Convenções
 
@@ -336,6 +340,17 @@ Objetos out não inicializados são aqueles que nascem na função que é só o 
 
 
 ##Custódia transferida de fora para dentro de uma função.
+
+Casos
+ * Mover um objeto inicializado (in out)
+ * Mover um objeto sob a custodia de um ponteiro 
+ 
+A operacao de mover um objeto nao precisa ter nenhuma diferenca em relacao a ser um objeto in out.
+Por exemplo, um objeto strint in out que entrou com um valor e saiu vazio. Do ponto de vista do objeto ele apenas foi modificado.
+A diferenca entre in out e movido ocorre apenas se quisermos otimizar o move de forma que o ojbeto nao possa mais ser utilizado depois.
+Esta otmizcao na pratica ser ser a atruibuicao de algumas membros do ojeto. Entao para o conceito geral eh melhor deixar
+o move especial como uma otimizacao.
+
 
 A transferência de custódia de um objeto para o parâmetro de uma função pode ser de duas formas.
 Incondicional, aonde a custódia é transferida independente do sucesso da função. 
@@ -400,6 +415,8 @@ Trasferencia de objetos no heap
 ```c
 Result Array_Add(List* pArray, T ** pItem)
 {
+  //ponteiro p ponteiro com custodia nao nulo entrou na funcao
+  //e pode ser movido
   Result result = Array_Reserve(pArray, pArray->size + 1);
   if (result == RESULT_OK)
   {
@@ -438,6 +455,8 @@ Trasferencia de objetos no heap incondicional
 ```c
 Result Array_Add(List* pArray, T * item)
 {
+  //item inicializado com custodia entrou na funcao
+  //e poed ser movido
   Result result = Array_Reserve(pArray, pArray->size + 1);
   if (result == RESULT_OK)
   {
@@ -487,6 +506,7 @@ A trasnferecia de custodia precisa ser documentada pois o chamador tem que estar
 que o objeto pode ficar em um estado invalido e nao pode mais ser usado apenas destruido.
 Poderia ter um macro MAY_MOVE(T). De certa forma é melhor nao tentar averiguar se foi movido ou nao.
 pois a intencao era mover, e o uso do objeto eh apenas para faciliar a destruicao de forma homegenia.
+Quando a transferencia ocorre por ponteiro obrigatoriamente o ponteiro de entrada tinha custodia.
 
 
 ```c
@@ -506,6 +526,73 @@ pois a intencao era mover, e o uso do objeto eh apenas para faciliar a destruica
 ```
 
 ##Custódia transferida de dentro para fora da função.
+
+Casos
+
+* Ponteiro out não inicalizado para custodia
+* Pointeiro in out com custodia.
+* Ponteiro sem custodia (poderia ser in out ou out ou nao inializado)
+* Objeto não inicializado. (out)
+* Objeto inicializado (in out)
+ 
+Geralmente este caso ocorre na producao de objetos. Objetos criados sao enviados
+para fora. Desta forma o valores de entrada que irao receber os objetos criados
+podem ser nao inicializados.
+É possivel fazer um swap e neste caso o objeto de entrada deve estar inicialiozado
+Ou daria para fazer um InitMove considerando que ele nao esta inicializdo
+O problema eh que ele seria inicializado dependendo do sucsso da funcao. E neste
+caso do caminho do destroy seria assim.
+Outra situacao eh a mudanca de um objeto. Neste caso é um in out e não é preciso entender como
+custodia modificada. APenas o pbjeto foi alterado.
+Ja no caso de ponteiro eh diferente. Pois um ponteiro modificado é preciso saber se eh um ponteiro 
+que tem custodia.
+
+Versao out nao inicializado
+```c
+
+T item1;
+T item2;
+//neste caso sao outs nao inicialiazados.
+
+result = X_Create(&item, &item2);
+if (result == RESULT_OK)
+{
+  //tudo ou nada
+  T_Destroy(&item1);   
+  T_Destroy(&item2);   
+}
+
+
+```
+
+Versao out inicializado. (Swap)
+```c
+//este exemplo estaria protegido contra um nao "tudo ou nada"
+T item1;
+result = T_Init(&item);
+if (result == RESULT_OK)
+{
+  T item2;
+  result = T_Init(item2);
+  if (result == RESULT_OK)
+  {
+     //em outras palavras aqui item1 e item sao in out
+     result = X_Create(&item1, &item2);
+     if (result == RESULT_OK) 
+     {
+        
+     }
+     T_DestroY(&item2);      
+  }
+  T_DestroY(&item1);      
+}
+
+```
+No caso de ponteiros nao custa nada inicializar para null. Neste caso a funcao que entrega a custodia para fora
+pode ter um assert pelo ponteiro nulo.
+A vantagem da entrada inicializada eh que a mesma funcao pode ser usada para criacao ou mudanca.
+
+
 Neste caso a custódia é sempre condicionada ao sucesso da função e nunca é parcial.
 
 Todo retorno const char* de função é considerado como não passando a custódia;
@@ -519,6 +606,18 @@ const char* T_GetName(T *p)
 
 Strings em funções são passadas como const char*.
 char* nuna deve significar número. Para isso use byte ou uint8_t.
+
+#Distinção de ponteiros com custódia
+
+O tipo de um ponteiro com custodia é o mesmo que o sem. Ou seja, esta informacao nao esta
+no ponteiro.
+O que e possivel fazer é um typedef para indicar que existe custodia ou um sufixo no nome
+da variavel para indicar.
+
+Um ponteiro pode ser transformado em uma classe no C e ter a mesma semantica de 
+um objeto comum.
+
+Um caso muito comum e que pode gerar muita confusao sao as strings do C.
 
 #Custódia de Strings
 
