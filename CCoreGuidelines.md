@@ -1,4 +1,11 @@
 
+#Introdução
+O objetivo deste manual é descrever padrões e práticas para se criar softwaer em C.
+Existem muitos estilos diferentes seja identacacao nomes padroes de programacao.
+O estilo aqui, não prendente se colocar como a melhor maneira de se fazer software em C, 
+porém como uma maneira real que funciona para qualquer tamanho de projeto e que diminui a existencia de bugs,
+de memory leaks.
+
 
 #Propagação de erros
 
@@ -98,6 +105,14 @@ T obj = T_INIT;
 ```
 
 ##Sintaxe e Semântica das funções comuns entre objetos
+Os objetos possuem funcoes em comum indedenten do seu tipo.
+Estas funcoes que possuem a mesma semantica podem ser indentificadas pelo nome e desta
+forma o programador automaticamente conhece o seu funcionamento indendente do tipo. 
+Para exemplicar a inportancia disso na verdade basta considerar a ausencia destas convencoes e
+o tempo perdido na descoberta da semantica de criacao e limpeza de cada objeto.
+Seguir estas funções significa entao acelerar muito o desenvolvido e diminuir a ocorrencia de bugs.
+ 
+##Init / Destroy
 
 ###T_Init
 
@@ -106,17 +121,19 @@ Result T_Init(T* p);
 ```
 
 Inicializa o objeto p.
-O chamador deve garantir que p não é nulo.
-Uma característica desta função é que p é um parâmetro out não inicializado.
+O parâmetro p é não nulo out e não inicializado.
 
 A implementação deve garantir que nenhum leak ocorre em caso de falha.
 Caso a Init não tenha sucesso, nenhuma outra função que use T pode ser usada, 
 incluindo a T_Destroy.
 Se Init teve sucesso  o _Destroy (se existir) deve ser sempre chamado.
 Nem toda Init falha. No entanto definir um resultado para init auxilia na 
-homogenizacao do conceito de Init / Destroy através da criação do bloco if.
+homogenizacao do conceito de Init / Destroy através da criação do bloco if. 
+Outra vantagem é caso o objeto seja modificado e passe e dar erro no Init, você nao precisa
+reescrever os chamadores do objetos, pois eles estão preparados.
 
 Isto automaticamente cria o seguinte padrão:
+
 ```cpp
 int main()
 {
@@ -124,6 +141,7 @@ int main()
    Result result = T_Init(&t);
    if (result == RESULT_OK)
    {
+     //uso de t
      T_Destroy(&t);
    }
 }
@@ -141,6 +159,8 @@ O Destroy não é uma função obrigatória.
 Nem todos os objetos precisam liberar recursos na destruição.
 No entando a existência da função Destroy obriga a sua chamada após a Init. Isso garante um conceito homegênio que evita bugs.
 
+##Create / Delete
+
 ###T_Create
 ```cpp
 Result T_Create(T**pp);
@@ -149,7 +169,8 @@ Cria o objeto T fora da pilha e inicializa ele com Init. Caso o Init falhe, ele 
 Uma função Init sempre existe, mas uma create é opcional. Ela é usada quando o tipo de objeto vai ser criado fora da pilha.
 Algumas vezes um determinado tipo somente é criado fora da pilha, neste caso deixe a função Init/Destroy apenas como detalhe de implementação e publica no header apenas a Create e Delete.
 Se o objeto for hora criado no heap ora na pilha, mantenha no header as 4 opções. Init/Destroy e Create/Delete.
-somente fora dela.
+somente fora dela. Para um objeto que nunca é criado na pilha considere também deixá-lo declarado no arquivo .c. 
+Com isso você maior encapsulamento sem custo algum. 
 
 Na implementação da Create, caso ela use o heap, não utilie o malloc diretante. Faça seu próprio Malloc e Free.
 Isso permite que você implemente um detector de memory leaks ou mude a estratégia do alocador global sem mexer mais no seus tipos.
@@ -284,6 +305,7 @@ TODO
 ##InitMove
 Move o objeto de entrada para o objeto que está sendo inicializado. O objeto de entrada
 fica em um estado que pode ser destruido.
+Ele é movido condicionamente ao sucesso do init.
 
 
 ##Convenções
@@ -316,7 +338,8 @@ Objetos out não inicializados são aqueles que nascem na função que é só o 
 ##Custódia transferida de fora para dentro de uma função.
 
 A transferência de custódia de um objeto para o parâmetro de uma função pode ser de duas formas.
-Incondicional, aonde a custódia é transferida independente do sucesso da função. Ou condicionado ao sucesso.
+Incondicional, aonde a custódia é transferida independente do sucesso da função. 
+Ou condicionado ao sucesso.
 
 ```c
 //Aqui a transferência é incondicional
@@ -325,9 +348,23 @@ Result Array_Add(List* pArray, T * pItem)
   Result result = Array_Reserve(pArray, pArray->size + 1);
   if (result == RESULT_OK)
   {
-  
+    T_InitMove(&pArray->data[pArray->size], item);
+    
   }
-  T_Delete(pItem);
+  else
+  {
+      T_Destroy(pItem);
+  }
+}
+
+void F1()
+{
+ T item;
+ Result result = Array_Add(&array, &item); //transferido incondicionamente
+ if (result == RESULT_OK)
+ {
+     
+ }
 }
 ```
 
@@ -338,13 +375,113 @@ Result Array_Add(List* pArray, T * pItem)
   Result result = Array_Reserve(pArray, pArray->size + 1);
   if (result == RESULT_OK)
   {
-     T_MoveTo
-    //transferido
+    T_InitMove(&pArray->data[pArray->size], item);
+    pArray->size++;
   }
-  //T_Delete(pItem);
 }
+
+
+void F2()
+{
+ T item;
+ Result result = Array_Add(&array, &item); //transferido condificonamente
+ if (result == RESULT_OK)
+ {
+     
+ }
+ //nao eh seguro usar item aqui pode ter sido movido
+ T_Destroy(&item); //pode ou ter sido movido
+}
+
+
 ```
-Também dá para fazer transferencia com swap.
+Trasferencia de objetos no heap
+
+```c
+Result Array_Add(List* pArray, T ** pItem)
+{
+  Result result = Array_Reserve(pArray, pArray->size + 1);
+  if (result == RESULT_OK)
+  {
+    //o conteudo de item passou a ser do array
+    //o ownership do conteudo foi movido
+    pArray->data[pArray->size] = *item;
+    *item = NULL;
+    //T_PtrInit
+    //T_PtrInitMove
+    pArray->size++;
+  }
+}
+
+
+void F2()
+{
+ T* item;
+ Result result = T_Create(&item);
+ if (result == RESULT_OK)
+ {
+   result = Array_Add(&array, &item); //transferido condificonamente
+   if (result == RESULT_OK)
+   {
+     
+   }
+   //nao eh seguro usar item aqui pode ter sido movido
+   T_Delete(item);
+ } 
+}
+
+
+```
+
+Trasferencia de objetos no heap incondicional
+
+```c
+Result Array_Add(List* pArray, T * item)
+{
+  Result result = Array_Reserve(pArray, pArray->size + 1);
+  if (result == RESULT_OK)
+  {
+    //o conteudo de item passou a ser do array
+    //o ownership do conteudo foi movido
+    pArray->data[pArray->size] = *item;
+    *item = NULL;
+    //T_PtrInit
+    //T_PtrInitMove
+    pArray->size++;
+  }
+  //nao eh seguro usar item aqui pode ter sido movido
+  T_Delete(item);
+}
+
+
+void F2()
+{
+ T* item;
+ Result result = T_Create(&item);
+ if (result == RESULT_OK)
+ {
+   result = Array_Add(&array, item); //transferido incondificonamente *
+   if (result == RESULT_OK)
+   {
+     
+   }
+   //aqui nao tem delete
+   
+   //poderia deixar o delete e mover ** incondicionamente
+   //mas dai o delete ja se sabe que eh descnecessario.
+ } 
+}
+
+
+```
+A conclusao que o melhor estilo eh mover condificonamente.
+Move ponteiros com ponteiro de ponteiro.
+
+Também dá para fazer transferencia de custodia com swap.
+O conteudo de um item passa para o outro e vice versa. Isso pode ser usado
+para funcoes do tipo substituicao de um item. Ao inves de um Add seria um "SetAt" ou
+"Replace"ou "Change". Um move pode deixar um objeto em um estado incosistente, ja o swap deixa smepre
+em um estado que foi modificado mas consistnte.
 
 
 ##Custódia transferida de dentro para fora da função.
@@ -449,7 +586,8 @@ Para todos os outros user "Getters"
 
 ##Encapsulamento
 
-Mantenha no header apenas as funções usadas por outros arquivos. Funções que são detalhes de implementação mantenha como static no arquivo c.
+Mantenha no header apenas as funções usadas por outros arquivos.
+Funções que são detalhes de implementação mantenha como static no arquivo c.
 
 ##Encapsulamento de objetos criados no heap
 Para objetos criados sempre no heap, esconda a função Init e use ponteiro opacos para esconder os detalhes de implementação.
