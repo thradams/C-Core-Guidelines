@@ -2,8 +2,17 @@
 
 #Propagação de erros
 
-Defina um tipo erro para fazer a propagação do erro através do resultado da função.
+Em C, umas das melhores maneiras, senão a melhor, de se propagar erros
+é através do retorno das funções.
 
+ * Use enum para definir um tipo de erro e para garantir que cada valor é único
+ * Coloque em um header só para isso
+ * Adicione apenas os erros que você está usando 
+ * Não crie erros para o futuro e remova erros não usados 
+ * Se você estiver usando um protocolo coloque as constantes numéricas
+ * Logo que precisar, crie uma função que converta o valor para texto. Crie o .c equivalente com a implementação.
+ * Se estiver criando uma lib inclua um sufixo no tipo e valores
+ 
 ```cpp
 //Result.h
 
@@ -14,16 +23,40 @@ typedef enum
   RESULT_OUT_OF_MEM,
 } Result;
 ```
-Adicione apenas os erros que você está usando. 
-Não crie erros para o futuro e remova erros não usados. 
 
+Uma lib que foi criada para ser incluída em outro projeto, 
+vai possuir seu próprio tipo e valores  de erros.
+Isso ocorre porque não existe uma definição universal do erro,
+embora os erros como falta de memória ou erros genéricos existirão 
+em qualquer programa.
 
-(Uma ferramenta de análise estática deveria procurar por todas as comparações (if/switches) de variáveis do tipo Result com cada tipo de erro.
-Se o tipo de erro não for usado deveria apresentar um warning. A ferramenta em modo "lib" deve procurar por escritas. A diferenças entre uma "lib" é que o uso de um código de erro pode ser apenas um escrita pois a leitura pode não estar visível.)
-Qualquer enum poderia usar estas regras.
+A maneira de se lidar com isso, é converter os erros da lib para erros locais do seu programa.
+Como isso pode ser uma tarefa árdua pois nem sempre se tem uma lista clara de erros a outra alternativa
+é propagar em conjunto 2 ou mais erros até chegar no códito que trata.
 
-Logo que precisar, crie uma função para converter código de erro em texto.
+Exemplo.
+Se você usar uma lib de sockets vai ter erros especificos. 
+Você pode definir um valor RESULT_SOCKET_ERROR para indicar 
+que a informação extra de erro (no caso o erro que vem da lib de sockets do SO) deve ser usada.
 
+Quanto mais libs forem usadas mais complicado fica.
+Em uma cadeia pequenas de chamadas pode ser uma boa solução.
+
+```c
+Result SentString(socket* s, const char* str, int sockerrors);
+
+```
+Quando a cadeia de erros é grande, ou seja, o ponto que o erro
+é lançado é muito distante do ponto aonde o erro é tratado, e o número de erros possíveis é muito grande, 
+o que eu recomendo é ignorar o número do erro complementar (algo que geralmente é possível)  e propagar a informação extra na forma de string.
+A string, diferente do número de erro, aceita misturas de libs e propaga informação complementar indiferente da fonte. 
+De certa forma a string é o propagador universal de informação extra.
+
+Informações específicas, necessárias para tratar um caso podem ser individualmente incorporadas ao programa.
+
+RESULT_SOCKET_ERROR_I_WILL_CHECK
+
+Para a string de informação de erro extra, o ideal é criar um tipo.
 
 
 #Objetos em C
@@ -38,20 +71,33 @@ typedef struct
 } T;
 ```
 
+Esta declação com typedef permite que o tipo seja usado sem a palabra struct na frente. 
+Semelhante ao que acontece no C++.
+
+Diferentemente do C++, em C qualquer coisa pode ser um objeto sem que seja preciso criar wrappers.
+
+```c
+typedef int MyInt;
+```
+Neste caso acabo de criar a classe MyInt que funciona como um int mas que pode ser extendido.
+
+```c
+MyInt_IsOdd(MyInt i);
+```
+
 ##Inicialização estática
+
 A inicialização de objetos pode ser feito em uma linha através de uma atribuição.
 T_INIT é uma macro que deve ser declarada junto do objeto.
 
-A inicialização estática também depende de um Destroy. Ver mais adiante.
-Isso porque após a inicialização estática o objeto pode sobrer transformações que fazem ele 
-adquirir recursos que deve ser liberados.
-Para uma maior simetria utilize a inicialização estática para objetos sem destroy.
-
+Uma característica é que ela não falha. O ideal é usar este tipo de inicilização em objetos
+aonde não seja preciso fazer limpeza ao fim do escopo.
+Objetos deste tipo, podem precisar a inicialização por função também.
 ```cpp
 T obj = T_INIT;
 ```
 
-##Funções comuns
+##Sintaxe e Semântica das funções comuns entre objetos
 
 ###T_Init
 
@@ -61,13 +107,14 @@ Result T_Init(T* p);
 
 Inicializa o objeto p.
 O chamador deve garantir que p não é nulo.
-Uma característica desta função é que p é um parâmetro out não inicializado. Ou seja, a princípio p contém lixo.
-A implementação deve garantir que nenhum leak ocorre em caso de falha.
-Caso a Init não tenha sucesso, nenhuma outra função que use T pode ser usada, incluindo a T_Destroy.
-Se Init teve sucesso  o _Destroy deve ser sempre chamado.
-Nem toda Init falha. No entanto definir um resultado para init auxilia na homogenizacao do conceito de Init / Destroy através da criação do bloco if.
-O destroy neste caso sempre é chamado precedendo um } o que torna fácil acompanhar o par init destroy através do alinhamento das chaves.
+Uma característica desta função é que p é um parâmetro out não inicializado.
 
+A implementação deve garantir que nenhum leak ocorre em caso de falha.
+Caso a Init não tenha sucesso, nenhuma outra função que use T pode ser usada, 
+incluindo a T_Destroy.
+Se Init teve sucesso  o _Destroy (se existir) deve ser sempre chamado.
+Nem toda Init falha. No entanto definir um resultado para init auxilia na 
+homogenizacao do conceito de Init / Destroy através da criação do bloco if.
 
 Isto automaticamente cria o seguinte padrão:
 ```cpp
@@ -87,23 +134,27 @@ int main()
 void T_Destroy(T* p);
 ````
 O destroy é usado pelo chamador para indicar o término do uso do objeto p. 
-
 O chamador deve garantir que p não é nulo.
 Depois do destroy p não pode mais ser usado.
 O implementador usa o destroy para liberar qualquer recurso e destruir os objetos filhos.
-O Destroy não é uma função obrigatória. Tem todos os objetos precisam liberar recursos na destruição.
-No entando a existência da função Destroy obriga a sua chamada após a Init.
+O Destroy não é uma função obrigatória. 
+Nem todos os objetos precisam liberar recursos na destruição.
+No entando a existência da função Destroy obriga a sua chamada após a Init. Isso garante um conceito homegênio que evita bugs.
 
 ###T_Create
 ```cpp
 Result T_Create(T**pp);
 ```
-Cria o objeto T fora da pilha e depois inicializa o objeto.
-Caso a função falhe nenhum leak é criado.
-Uma função Init sempre existe, mas uma create é opcional. Quando a função Create existir, a Init também pode virar "private" caso o objeto nunca seja alocado na pilha e somente fora dela.
+Cria o objeto T fora da pilha e inicializa ele com Init. Caso o Init falhe, ele destroy o objeto e a função não tem efeito colateral.
+Uma função Init sempre existe, mas uma create é opcional. Ela é usada quando o tipo de objeto vai ser criado fora da pilha.
+Algumas vezes um determinado tipo somente é criado fora da pilha, neste caso deixe a função Init/Destroy apenas como detalhe de implementação e publica no header apenas a Create e Delete.
+Se o objeto for hora criado no heap ora na pilha, mantenha no header as 4 opções. Init/Destroy e Create/Delete.
+somente fora dela.
 
-Crie uma função Malloc para funcionar com o allocador padrão. E da mesma forma Free para liberar a memória do alocador padrão.
-Criar e usar somente estas funções auxilia na prevenção de memory leaks.
+Na implementação da Create, caso ela use o heap, não utilie o malloc diretante. Faça seu próprio Malloc e Free.
+Isso permite que você implemente um detector de memory leaks ou mude a estratégia do alocador global sem mexer mais no seus tipos.
+
+Aqui está a função completa para um tipo T.
 
 ```cpp
 Result T_Create(T**pp)
@@ -140,11 +191,14 @@ void T_Delete(T* p)
 ```
 
 Destroi o objeto p e devolve a memória para o alocador.
-Obrigatoriamente, se p for nulo a função não tem efeito.
+Obrigatoriamente, se p for nulo a função não tem efeito. 
+Isso é usado para simplificar o número de caminhos em algumas funções. Caso você tenha um caso crítico de performance crie a UnsafeDelete que não testa por nulo.
+O padrão da delete, segue desta forma o mesmo padrão do free do C e delete do C++. Ou seja, é "safe" testa por null.
 Caso exista uma função Create haverá uma Delete.
 
 ###T_Reset
 
+Função completa
 ```cpp
 Result T_Reset(T* p)
 {
@@ -154,7 +208,7 @@ Result T_Reset(T* p)
 ```
 
 Reset é uma utilitária, destroi o objeto e volta para o estado correspondente ao init.
-
+Se o Reset falhar o objeto não poderia ser mais usado, ou seja, a "reciclagem" falhou.
 
 ###T_Swap
 ```cpp
@@ -165,12 +219,15 @@ void T_Swap(T* p1, T* p2);
     *p1 = temp;
 }
 ```
+Em raros casos esta implementação não é a definitiva.
+Quando o objeto possui ponteiros para si mesmo uma cópia simples de memória não é suficiente.
 A swap copia o estado do objeto p1 para o objeto p2 e vice versa.
 p1 e p2 estão inicializados.
 
 ###T_Clear
-A função clear não destroy o objeto. Ela coloca o objeto em um estado válido vazio que não corresponde ao Reset.
-O Reset coloco no estado identico ao Init. A clear ,por exemplo, pode zerar uma string sem desalocar memória. 
+A função clear não destroy o objeto.
+Ela coloca o objeto em um estado válido vazio que não corresponde obrigatoriamente ao Reset.
+A clear ,por exemplo, pode zerar uma string sem desalocar sua memória. 
 
 
 ##T_InitCopy
@@ -180,7 +237,7 @@ Result T_InitCopy(T* p1, T* p2);
     
 }
 ```
-Copia, duplica, p2 incluindo todos as partes para p1 que não está inicializado.
+Inicializa p1 com uma cópia de p2.
 
 ##T_Copy
 ```cpp
@@ -200,6 +257,7 @@ Result T_Copy(T* p1, T* p2);
 }
 ```
 Copia p2 para p1. p1 e p2 devem estar inicializados.
+Raramente esta não é a implemetação final.
 
 
 ##T_MoveTo (safe)
@@ -215,7 +273,7 @@ p1 e p2 estao inicializados. p1 é movido para p2 e depois fica no estado init q
 Este move então é util para fazer caminhos sem returns soltos aonde sempre é passado pelo destructor do objeto. 
 No caso de sucesso o objeto estara movido e em caso de erro ele fara a destruicao normal.
 
-
+Podemos ter o UnsafeMoveTo ou DismissMoveTo aonde o objeto não pode nem ser destruído.
 
 ##T_PtrMoveTo
 ```cpp
@@ -223,10 +281,14 @@ void T_PtrMoveTo(T** p1, T** p2);
 
 ```
 TODO 
+##InitMove
+Move o objeto de entrada para o objeto que está sendo inicializado. O objeto de entrada
+fica em um estado que pode ser destruido.
 
-##Funções
 
-Todo parâmetro do tipo ponteiro é por padrão não-nulo e input.
+##Convenções
+
+Todo parâmetro do tipo ponteiro é por padrão não-nulo.
 
 ```
 void F(T* p)
@@ -236,8 +298,7 @@ void F(T* p)
 ```
 
 Qualquer comparação por nulo, torna o ponteiro opcional.
-
-
+Qualquer uso do ponteiro torna ele IN.
 Qualquer atribuição torna o ponteiro out.
 Qualquer uso antes da atribuição torna o ponteiro in-out.
 
@@ -249,6 +310,7 @@ void Get(int *p)
 }
 ```
 Por padrão os objetos out estão inicializados. A init é a exceção.
+Objetos out não inicializados são aqueles que nascem na função que é só o caso da Init.
 
 
 ##Custódia transferida de fora para dentro de uma função.
@@ -256,7 +318,7 @@ Por padrão os objetos out estão inicializados. A init é a exceção.
 A transferência de custódia de um objeto para o parâmetro de uma função pode ser de duas formas.
 Incondicional, aonde a custódia é transferida independente do sucesso da função. Ou condicionado ao sucesso.
 
-```
+```c
 //Aqui a transferência é incondicional
 Result Array_Add(List* pArray, T * pItem)
 {
@@ -265,9 +327,25 @@ Result Array_Add(List* pArray, T * pItem)
   {
   
   }
-  T_Delete(pTOwner);
+  T_Delete(pItem);
 }
 ```
+
+```c
+//Aqui a transferência é condicional
+Result Array_Add(List* pArray, T * pItem)
+{
+  Result result = Array_Reserve(pArray, pArray->size + 1);
+  if (result == RESULT_OK)
+  {
+     T_MoveTo
+    //transferido
+  }
+  //T_Delete(pItem);
+}
+```
+Também dá para fazer transferencia com swap.
+
 
 ##Custódia transferida de dentro para fora da função.
 Neste caso a custódia é sempre condicionada ao sucesso da função e nunca é parcial.
