@@ -483,6 +483,27 @@ para funcoes do tipo substituicao de um item. Ao inves de um Add seria um "SetAt
 "Replace"ou "Change". Um move pode deixar um objeto em um estado incosistente, ja o swap deixa smepre
 em um estado que foi modificado mas consistnte.
 
+A trasnferecia de custodia precisa ser documentada pois o chamador tem que estar ciente
+que o objeto pode ficar em um estado invalido e nao pode mais ser usado apenas destruido.
+Poderia ter um macro MAY_MOVE(T). De certa forma é melhor nao tentar averiguar se foi movido ou nao.
+pois a intencao era mover, e o uso do objeto eh apenas para faciliar a destruicao de forma homegenia.
+
+
+```c
+ T* item;
+ Result result = T_Create(&item);
+ if (result == RESULT_OK)
+ {
+     
+   result = Array_Add(&array, MOVE(item));
+   result = Array_Add(&array, &item /*move*/);
+   if (result == RESULT_OK)
+   {
+     
+   }
+   T_Delete(item);
+ }
+```
 
 ##Custódia transferida de dentro para fora da função.
 Neste caso a custódia é sempre condicionada ao sucesso da função e nunca é parcial.
