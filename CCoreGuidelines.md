@@ -735,6 +735,7 @@ Este este arquivo para preparar o ambiente de compilação de acordo com a plata
 #Custódia em calbacks e void*
 
 
-
+#Private
+Existem libs que simulam o private mudando os nomes dos membros de uma struct em release.
 
 
